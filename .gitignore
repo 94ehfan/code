@@ -1,4 +1,28 @@
-.venv
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
 .mypy_cache
-__pycache__
-*.egg-info
+
+# Node
+node_modules/
+dist/
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+pgdata/

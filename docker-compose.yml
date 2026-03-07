@@ -1,70 +1,46 @@
-version: "3"
+version: "3.8"
 
 services:
-
-  redis_pubsub:
+  backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    image: allocation-image
-    depends_on:
-      - postgres
-      - redis
-      - mailhog
-    environment:
-      - DB_HOST=postgres
-      - DB_PASSWORD=abc123
-      - REDIS_HOST=redis
-      - EMAIL_HOST=mailhog
-      - PYTHONDONTWRITEBYTECODE=1
-    volumes:
-      - ./src:/src
-      - ./tests:/tests
-    entrypoint:
-      - python
-      - /src/allocation/entrypoints/redis_eventconsumer.py
-
-  api:
-    image: allocation-image
-    depends_on:
-      - redis_pubsub
-      - mailhog
-    environment:
-      - DB_HOST=postgres
-      - DB_PASSWORD=abc123
-      - API_HOST=api
-      - REDIS_HOST=redis
-      - EMAIL_HOST=mailhog
-      - PYTHONDONTWRITEBYTECODE=1
-      - FLASK_APP=allocation/entrypoints/flask_app.py
-      - FLASK_DEBUG=1
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./src:/src
-      - ./tests:/tests
-    entrypoint:
-      - flask
-      - run
-      - --host=0.0.0.0
-      - --port=80
     ports:
-      - "5005:80"
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://draft:draft@postgres:5432/ticketdraft
+      - SECRET_KEY=dev-secret-change-in-production
+      - APP_URL=http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
   postgres:
-    image: postgres:9.6
+    image: postgres:16-alpine
     environment:
-      - POSTGRES_USER=allocation
-      - POSTGRES_PASSWORD=abc123
+      - POSTGRES_USER=draft
+      - POSTGRES_PASSWORD=draft
+      - POSTGRES_DB=ticketdraft
     ports:
-      - "54321:5432"
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U draft -d ticketdraft"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  redis:
-    image: redis:alpine
-    ports:
-      - "63791:6379"
-
-  mailhog:
-    image: mailhog/mailhog
-    ports:
-      - "11025:1025"
-      - "18025:8025"
+volumes:
+  pgdata:
